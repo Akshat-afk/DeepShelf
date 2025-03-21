@@ -95,10 +95,15 @@ st.markdown('<div class="subtext">Find the best books based on your preferences!
 query = st.text_input("🔍 Enter a book description (e.g., 'A dark fantasy with drama')", max_chars=200, help="Use keywords to describe your ideal book!")
 button_disabled = not (3 <= len(query) <= 200)  # Disable button if query length is invalid
 
-if st.button("✨ Recommend Books", disabled=button_disabled, help="Click to get personalized book recommendations!"):
+button_placeholder = st.empty()
+
+if button_placeholder.button("✨ Recommend Books", disabled=button_disabled, help="Click to get personalized book recommendations!"):
     if rate_limit():
+        button_placeholder.button("✨ Processing...", disabled=True)  # Disable button while processing
         with st.spinner("🔍 Searching for the best books..."):
             recommendations = recommend_books(query)
+        
+        button_placeholder.button("✨ Recommend Books", disabled=False)  # Re-enable button after processing
         
         st.markdown("## 📚 Recommended Books:")
         for rec in recommendations:
