@@ -1,0 +1,8 @@
+streamlit
+faiss-cpu
+sentence-transformers
+huggingface_hub
+pandas
+numpy
+requests
+streamlit_lottie
