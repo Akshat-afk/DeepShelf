@@ -30,7 +30,7 @@ cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
 request_times = []  # Track request timestamps
 
 @st.cache_data
-def recommend_books(query):
+async def recommend_books(query):
     query = sanitize_input(query)
     if len(query) > 200:
         st.warning("⚠️ Query is too long. Please keep it under 200 characters.")
@@ -57,7 +57,7 @@ def recommend_books(query):
     merge['Query'] = query
 
     pairs = list(zip(merge['Query'], merge['summary']))
-    scores = cross_encoder.predict(pairs)
+    scores = await asyncio.get_event_loop().run_in_executor(None, cross_encoder.predict, pairs)
     merge['score'] = scores
 
     df_sorted = merge.iloc[merge["score"].argsort()][::-1]
@@ -103,7 +103,7 @@ if st.button("✨ Recommend Books", help="Click to get personalized book recomme
     if rate_limit():
         if query:
             with st.spinner("🔍 Searching for the best books..."):
-                recommendations = recommend_books(query)
+                recommendations = asyncio.run(recommend_books(query))
             
             st.markdown("## 📚 Recommended Books:")
             for rec in recommendations:
