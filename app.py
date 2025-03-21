@@ -4,9 +4,17 @@ import faiss
 import pandas as pd
 import numpy as np
 import requests
+import torch
 import asyncio
+import re
+import time
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from huggingface_hub import hf_hub_download
+from langdetect import detect
+
+# Ensure compatibility with event loops across OS
+if os.name == "nt":  # Windows
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 HF_REPO = "AKKI-AFK/deepshelf-data"
 
@@ -19,12 +27,26 @@ index = faiss.read_index(faiss_file)
 encoder = SentenceTransformer("sentence-transformers/paraphrase-mpnet-base-v2")
 cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
 
-def safe_predict(model, inputs):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return model.predict(inputs)
+request_times = []  # Track request timestamps
 
+@st.cache_data
 def recommend_books(query):
+    query = sanitize_input(query)
+    if len(query) > 200:
+        st.warning("⚠️ Query is too long. Please keep it under 200 characters.")
+        return []
+    
+    if len(query) < 3:
+        st.warning("⚠️ Query is too short. Please provide more details.")
+        return []
+    
+    try:
+        lang = detect(query)
+        if lang != "en":
+            st.warning("⚠️ Non-English query detected. Results may not be accurate.")
+    except:
+        st.warning("⚠️ Could not detect language. Ensure proper input.")
+    
     search_vector = encoder.encode(query)
     search_vector = np.array([search_vector])
     faiss.normalize_L2(search_vector)
@@ -35,11 +57,28 @@ def recommend_books(query):
     merge['Query'] = query
 
     pairs = list(zip(merge['Query'], merge['summary']))
-    scores = safe_predict(cross_encoder, pairs)
+    scores = cross_encoder.predict(pairs)
     merge['score'] = scores
 
     df_sorted = merge.iloc[merge["score"].argsort()][::-1]
     return df_sorted[["title", "summary"]][:5].to_dict(orient="records")
+
+def sanitize_input(text):
+    """Sanitize input by removing special characters and excessive spaces."""
+    text = re.sub(r'[^\w\s]', '', text)  # Remove special characters
+    text = re.sub(r'\s+', ' ', text).strip()  # Normalize spaces
+    return text
+
+def rate_limit():
+    """Rate-limiting function to prevent excessive queries."""
+    global request_times
+    current_time = time.time()
+    request_times = [t for t in request_times if current_time - t < 10]  # Keep only recent requests within 10 seconds
+    if len(request_times) >= 5:
+        st.error("⚠️ Too many requests. Please wait a few seconds before trying again.")
+        return False
+    request_times.append(current_time)
+    return True
 
 st.set_page_config(page_title="DeepShelf", page_icon="📚", layout="wide")
 
@@ -58,20 +97,21 @@ st.markdown("""
 st.markdown('<div class="title">📖 DeepShelf</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtext">Find the best books based on your preferences!</div>', unsafe_allow_html=True)
 
-query = st.text_input("🔍 Enter a book description (max 100 characters)", max_chars=100, help="Use keywords to describe your ideal book!")
+query = st.text_input("🔍 Enter a book description (e.g., 'A dark fantasy with drama')", max_chars=200, help="Use keywords to describe your ideal book!")
 
 if st.button("✨ Recommend Books", help="Click to get personalized book recommendations!"):
-    if query:
-        with st.spinner("🔄 Finding the best books for you..."):
-            recommendations = recommend_books(query)
-        
-        st.markdown("## 📚 Recommended Books:")
-        for rec in recommendations:
-            st.markdown(f"""
-                <div class="book-container">
-                    <div class="book-title">📖 {rec["title"]}</div>
-                    <div class="book-summary">{rec["summary"]}</div>
-                </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.warning("⚠️ Please enter a query.")
+    if rate_limit():
+        if query:
+            with st.spinner("🔍 Searching for the best books..."):
+                recommendations = recommend_books(query)
+            
+            st.markdown("## 📚 Recommended Books:")
+            for rec in recommendations:
+                st.markdown(f"""
+                    <div class="book-container">
+                        <div class="book-title">📖 {rec["title"]}</div>
+                        <div class="book-summary">{rec["summary"]}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.warning("⚠️ Please enter a query.")
