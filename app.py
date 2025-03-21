@@ -28,7 +28,6 @@ encoder = SentenceTransformer("sentence-transformers/paraphrase-mpnet-base-v2")
 cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
 
 request_times = []  # Track request timestamps
-button_disabled = False  # Track button state
 
 @st.cache_data
 async def recommend_books(query):
@@ -99,23 +98,18 @@ st.markdown('<div class="title">📖 DeepShelf</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtext">Find the best books based on your preferences!</div>', unsafe_allow_html=True)
 
 query = st.text_input("🔍 Enter a book description (e.g., 'A dark fantasy with drama')", max_chars=200, help="Use keywords to describe your ideal book!")
-button_disabled = st.session_state.get("button_disabled", False)
+button_disabled = not (3 <= len(query) <= 200)  # Disable button if query length is invalid
 
 if st.button("✨ Recommend Books", disabled=button_disabled, help="Click to get personalized book recommendations!"):
     if rate_limit():
-        st.session_state.button_disabled = True  # Disable button to prevent spam clicking
-        if query:
-            with st.spinner("🔍 Searching for the best books..."):
-                recommendations = asyncio.run(recommend_books(query))
-            
-            st.markdown("## 📚 Recommended Books:")
-            for rec in recommendations:
-                st.markdown(f"""
-                    <div class="book-container">
-                        <div class="book-title">📖 {rec["title"]}</div>
-                        <div class="book-summary">{rec["summary"]}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.warning("⚠️ Please enter a query.")
-        st.session_state.button_disabled = False  # Re-enable button after execution
+        with st.spinner("🔍 Searching for the best books..."):
+            recommendations = asyncio.run(recommend_books(query))
+        
+        st.markdown("## 📚 Recommended Books:")
+        for rec in recommendations:
+            st.markdown(f"""
+                <div class="book-container">
+                    <div class="book-title">📖 {rec["title"]}</div>
+                    <div class="book-summary">{rec["summary"]}</div>
+                </div>
+            """, unsafe_allow_html=True)
