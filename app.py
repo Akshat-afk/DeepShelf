@@ -5,16 +5,11 @@ import pandas as pd
 import numpy as np
 import requests
 import torch
-import asyncio
 import re
 import time
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from huggingface_hub import hf_hub_download
 from langdetect import detect
-
-# Ensure compatibility with event loops across OS
-if os.name == "nt":  # Windows
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 HF_REPO = "AKKI-AFK/deepshelf-data"
 
@@ -30,7 +25,7 @@ cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
 request_times = []  # Track request timestamps
 
 @st.cache_data
-async def recommend_books(query):
+def recommend_books(query):
     query = sanitize_input(query)
     if len(query) > 200:
         st.warning("⚠️ Query is too long. Please keep it under 200 characters.")
@@ -57,7 +52,7 @@ async def recommend_books(query):
     merge['Query'] = query
 
     pairs = list(zip(merge['Query'], merge['summary']))
-    scores = await asyncio.get_event_loop().run_in_executor(None, cross_encoder.predict, pairs)
+    scores = cross_encoder.predict(pairs)  # Running synchronously
     merge['score'] = scores
 
     df_sorted = merge.iloc[merge["score"].argsort()][::-1]
@@ -103,7 +98,7 @@ button_disabled = not (3 <= len(query) <= 200)  # Disable button if query length
 if st.button("✨ Recommend Books", disabled=button_disabled, help="Click to get personalized book recommendations!"):
     if rate_limit():
         with st.spinner("🔍 Searching for the best books..."):
-            recommendations = asyncio.run(recommend_books(query))
+            recommendations = recommend_books(query)
         
         st.markdown("## 📚 Recommended Books:")
         for rec in recommendations:
