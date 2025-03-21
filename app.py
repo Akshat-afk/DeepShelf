@@ -6,9 +6,6 @@ import numpy as np
 import requests
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from huggingface_hub import hf_hub_download
-from streamlit_lottie import st_lottie
-
-from huggingface_hub import hf_hub_download
 
 HF_REPO = "AKKI-AFK/deepshelf-data"
 
@@ -20,15 +17,6 @@ index = faiss.read_index(faiss_file)
 
 encoder = SentenceTransformer("sentence-transformers/paraphrase-mpnet-base-v2")
 cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
-
-def load_lottie_url(url):
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
-
-loading_animation = load_lottie_url("https://assets10.lottiefiles.com/packages/lf20_pNx6yH.json")
-book_animation = load_lottie_url("https://assets7.lottiefiles.com/packages/lf20_4yofo7QwIT.json")
 
 def recommend_books(query):
     search_vector = encoder.encode(query)
@@ -61,16 +49,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="title">📖 AI-Powered Novel Recommender</div>', unsafe_allow_html=True)
+st.markdown('<div class="title">📖 DeepShelf</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtext">Find the best books based on your preferences!</div>', unsafe_allow_html=True)
-
-st_lottie(book_animation, height=150, key="book_anim")
 
 query = st.text_input("🔍 Enter a book description (e.g., 'A dark fantasy with drama')", help="Use keywords to describe your ideal book!")
 
 if st.button("✨ Recommend Books", help="Click to get personalized book recommendations!"):
     if query:
-        st_lottie(loading_animation, height=120, key="loading_anim")
         recommendations = recommend_books(query)
         
         st.markdown("## 📚 Recommended Books:")
@@ -83,4 +68,3 @@ if st.button("✨ Recommend Books", help="Click to get personalized book recomme
             """, unsafe_allow_html=True)
     else:
         st.warning("⚠️ Please enter a query.")
-
