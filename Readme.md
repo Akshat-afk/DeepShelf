@@ -26,20 +26,9 @@ It uses:
 - **Hugging Face Hub** for model storage  
 
 ## 🔥 Try It Out Locally  
-1️⃣ Clone the repo:  
+ Clone the repo:  
   ```bash
-   git clone https://github.com/YOUR_USERNAME/novel-recommender.git
+   git clone https://github.com/Akshat-afk/DeepShelf
    cd novel-recommender
   ```
-  
-2️⃣ Install dependencies:
-  ```bash
-pip install -r requirements.txt
-  ```
-
-3️⃣ Run locally:
-  ```bash
-streamlit run app.py
-  ```
-
-4️⃣ Or check out the live version: [DeepShelf on Streamlit](https://deepshelf.streamlit.app/)  
+ Or check out the live version: [DeepShelf on Streamlit](https://deepshelf.streamlit.app/)  
