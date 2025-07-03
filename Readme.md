@@ -29,6 +29,5 @@ It uses:
  Clone the repo:  
   ```bash
    git clone https://github.com/Akshat-afk/DeepShelf
-   cd novel-recommender
   ```
  Or check out the live version: [DeepShelf on Streamlit](https://deepshelf.streamlit.app/)  
